@@ -1,4 +1,4 @@
-# SceneTalk
+<img width="1672" height="941" alt="ChatGPT Image 2026年6月14日 23_19_21" src="https://github.com/user-attachments/assets/617ae666-8f34-493c-baa1-4e3e405348d2" /># SceneTalk
 
 ### 能看、能听、能连续交流的 AI 视觉对话助手
 
@@ -46,7 +46,9 @@ SceneTalk 不持续上传完整视频流，而是采用**按需关键帧采集**
 
 ### 产品宣传图（理想实现ui）
 
-![ChatGPT Image 2026年6月14日 23_19_21](D:\ChatGPT Image 2026年6月14日 23_19_21.png)
+<img width="1672" height="941" alt="ChatGPT Image 2026年6月14日 23_19_21" src="https://github.com/user-attachments/assets/8e3d1483-44fc-4e61-b8e6-d8b14d8c7adf" />
+
+
 
 ### 项目界面Demo
 
