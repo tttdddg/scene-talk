@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HomeView from './views/HomeView.vue'
 </script>
 
 <template>
@@ -7,9 +8,7 @@
       <h1>SceneTalk</h1>
       <p class="tagline">AI 视觉对话助手</p>
     </header>
-    <main class="app-main">
-      <p class="status">系统就绪，等待开发...</p>
-    </main>
+    <HomeView />
   </div>
 </template>
 
@@ -18,38 +17,26 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
   background: #0f172a;
   color: #e2e8f0;
 }
 
 .app-header {
-  padding: 2rem 1rem 1rem;
+  padding: 1.25rem 1.5rem 0.5rem;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .app-header h1 {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #818cf8;
   margin: 0;
 }
 
 .tagline {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #94a3b8;
-  margin: 0.25rem 0 0;
-}
-
-.app-main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.status {
-  font-size: 1.1rem;
-  color: #64748b;
+  margin: 0.15rem 0 0;
 }
 </style>
