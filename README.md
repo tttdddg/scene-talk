@@ -1,4 +1,4 @@
-<img width="1672" height="941" alt="ChatGPT Image 2026年6月14日 23_19_21" src="https://github.com/user-attachments/assets/617ae666-8f34-493c-baa1-4e3e405348d2" /># SceneTalk
+# SceneTalk
 
 ### 能看、能听、能连续交流的 AI 视觉对话助手
 
@@ -48,13 +48,9 @@ SceneTalk 不持续上传完整视频流，而是采用**按需关键帧采集**
 
 <img width="1672" height="941" alt="ChatGPT Image 2026年6月14日 23_19_21" src="https://github.com/user-attachments/assets/8e3d1483-44fc-4e61-b8e6-d8b14d8c7adf" />
 
-
-
 ### 项目界面Demo
-
-### ![image-20260614234946087](C:\Users\20914\AppData\Roaming\Typora\typora-user-images\image-20260614234946087.png)
-
-![image-20260614235053334](C:\Users\20914\AppData\Roaming\Typora\typora-user-images\image-20260614235053334.png)
+<img width="2330" height="1338" alt="屏幕截图 2026-06-14 234944" src="https://github.com/user-attachments/assets/bd0b6c06-e2eb-4b8b-bd1b-9503a9b3684b" />
+<img width="2292" height="1316" alt="屏幕截图 2026-06-14 235051" src="https://github.com/user-attachments/assets/bc2b12e3-8297-47b7-af36-53090f5ca420" />
 
 ------
 
