@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import CameraStage from '../components/CameraStage.vue'
+import VoiceControl from '../components/VoiceControl.vue'
 import { useImageCapture } from '../composables/useImageCapture'
-import { Camera, Image, Trash2 } from 'lucide-vue-next'
+import { useSpeechSynthesis } from '../composables/useSpeechSynthesis'
+import { Camera, Image, Trash2, Volume2, Square } from 'lucide-vue-next'
 
 const cameraStageRef = ref<InstanceType<typeof CameraStage> | null>(null)
+const voiceControlRef = ref<InstanceType<typeof VoiceControl> | null>(null)
+
 const { snapshot, captureError, captureFrame, clearSnapshot } = useImageCapture()
+const { isSpeaking, voiceError, speak, stop } = useSpeechSynthesis()
+
+// 用于测试播报的最近一次识别文本
+const lastTranscript = ref('')
 
 function handleCapture(): void {
   const videoEl = cameraStageRef.value?.videoRef ?? null
@@ -23,6 +31,34 @@ function isCameraReady(): boolean {
 function handleCameraClose(): void {
   clearSnapshot()
 }
+
+// 收到最终识别文本
+function handleFinalTranscript(text: string): void {
+  lastTranscript.value = text
+}
+
+// 测试播报：使用固定测试文本验证 TTS
+function handleTestSpeak(): void {
+  const text = lastTranscript.value.trim()
+  if (!text) return
+  // 拼接一段测试回复来验证语音合成
+  speak(`收到你的问题：${text}。这是中文语音播报测试。`)
+}
+
+// 停止播报
+function handleStopSpeak(): void {
+  stop()
+}
+
+// 用户开始说话时停止旧播报
+watch(
+  () => voiceControlRef.value?.status,
+  (newStatus) => {
+    if (newStatus === 'listening') {
+      stop()
+    }
+  }
+)
 </script>
 
 <template>
@@ -45,7 +81,6 @@ function handleCameraClose(): void {
         </div>
 
         <div class="panel-body">
-          <!-- 有快照时显示 -->
           <div v-if="snapshot" class="snapshot-display">
             <img
               :src="snapshot"
@@ -61,7 +96,6 @@ function handleCameraClose(): void {
             </button>
           </div>
 
-          <!-- 无快照时显示占位 -->
           <div v-else class="snapshot-placeholder">
             <Camera :size="36" class="placeholder-icon" />
             <p class="placeholder-text">
@@ -69,10 +103,17 @@ function handleCameraClose(): void {
             </p>
           </div>
 
-          <!-- 截图错误提示 -->
           <p v-if="captureError" class="capture-error">{{ captureError }}</p>
         </div>
       </aside>
+    </section>
+
+    <!-- 语音交互区域 -->
+    <section class="voice-section">
+      <VoiceControl
+        ref="voiceControlRef"
+        @final-transcript="handleFinalTranscript"
+      />
     </section>
 
     <!-- 底部控制栏 -->
@@ -85,9 +126,35 @@ function handleCameraClose(): void {
         <Camera :size="20" />
         <span>捕获关键帧</span>
       </button>
+
+      <!-- 测试播报按钮（仅在有识别文本时可用） -->
+      <button
+        v-if="lastTranscript"
+        class="btn btn-speak"
+        :disabled="isSpeaking"
+        @click="handleTestSpeak"
+      >
+        <Volume2 :size="20" />
+        <span>测试播报</span>
+      </button>
+
+      <!-- 停止播报 -->
+      <button
+        v-if="isSpeaking"
+        class="btn btn-stop"
+        @click="handleStopSpeak"
+      >
+        <Square :size="18" />
+        <span>停止播报</span>
+      </button>
+
       <span class="control-hint">
-        {{ isCameraReady() ? '点击按钮抓取当前画面' : '请先开启摄像头' }}
+        <template v-if="isSpeaking">正在播报…</template>
+        <template v-else-if="isCameraReady()">点击按钮抓取当前画面</template>
+        <template v-else>请先开启摄像头</template>
       </span>
+
+      <span v-if="voiceError" class="speak-error">{{ voiceError }}</span>
     </footer>
   </div>
 </template>
@@ -99,7 +166,7 @@ function handleCameraClose(): void {
   flex: 1;
   min-height: 0;
   padding: 1.5rem;
-  gap: 1.5rem;
+  gap: 1.25rem;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -110,7 +177,6 @@ function handleCameraClose(): void {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
-  flex: 1;
   min-height: 0;
 }
 
@@ -155,7 +221,6 @@ function handleCameraClose(): void {
   min-height: 200px;
 }
 
-/* ---- 快照显示 ---- */
 .snapshot-display {
   display: flex;
   flex-direction: column;
@@ -171,7 +236,6 @@ function handleCameraClose(): void {
   display: block;
 }
 
-/* ---- 快照占位 ---- */
 .snapshot-placeholder {
   display: flex;
   flex-direction: column;
@@ -190,7 +254,6 @@ function handleCameraClose(): void {
   line-height: 1.5;
 }
 
-/* ---- 截图错误 ---- */
 .capture-error {
   color: #f87171;
   font-size: 0.82rem;
@@ -198,12 +261,20 @@ function handleCameraClose(): void {
   margin-top: 0.5rem;
 }
 
+/* ---- 语音区域 ---- */
+.voice-section {
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
 /* ---- 底部控制栏 ---- */
 .control-bar {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 0;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -238,6 +309,25 @@ function handleCameraClose(): void {
   background: #6366f1;
 }
 
+.btn-speak {
+  background: #059669;
+  color: #fff;
+}
+
+.btn-speak:hover:not(:disabled) {
+  background: #047857;
+}
+
+.btn-stop {
+  background: #dc2626;
+  color: #fff;
+  padding: 0.5rem 0.9rem;
+}
+
+.btn-stop:hover {
+  background: #b91c1c;
+}
+
 .btn-sm {
   padding: 0.4rem 0.8rem;
   font-size: 0.82rem;
@@ -258,5 +348,11 @@ function handleCameraClose(): void {
 .control-hint {
   color: #64748b;
   font-size: 0.85rem;
+  margin-left: auto;
+}
+
+.speak-error {
+  color: #f87171;
+  font-size: 0.82rem;
 }
 </style>
