@@ -14,5 +14,8 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
+    env: {
+      VITE_DEMO_MODE: 'false',
+    },
   },
 })

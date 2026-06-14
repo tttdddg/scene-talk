@@ -22,6 +22,20 @@ import {
 const MAX_HISTORY_ROUNDS = 4
 const MAX_HISTORY_MESSAGE_CHARS = 500
 
+/** When true, skip the backend and return simulated responses. */
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
+
+const DEMO_ANSWERS = [
+  '我看到一个室内场景，光线充足。画面中央有一张桌子，上面放着几本书和一个水杯。整体环境整洁有序。',
+  '当前画面中是一个办公区域，可以看到显示器和键盘。屏幕似乎亮着，可能正在运行某个程序或文档。',
+  '从画面来看，这是一个居家环境。墙上有一些装饰，角落里有一盆绿植，给房间增添了一些生机。',
+  '我看到你面前有一个物品。它看起来是金属材质，表面有光泽。如果你想知道更具体的细节，可以拿近一些让我看清楚。',
+  '画面中显示的是户外场景，有建筑物和树木。天气看起来不错，阳光明媚，适合户外活动。',
+  '根据当前画面，我能看到一个人在使用电脑。桌上还有一些文具和笔记本，看起来像是在工作或学习。',
+]
+
+const DEMO_MODEL_LATENCY_MS = 800
+
 // ---- Types ----
 
 export interface ConversationMessage {
@@ -56,6 +70,59 @@ function nextId(): string {
 function truncateText(text: string, maxLen: number): string {
   if (text.length <= maxLen) return text
   return text.slice(0, maxLen) + '…'
+}
+
+/**
+ * Simulate a vision model response for demo mode.
+ * Picks a somewhat-relevant answer from the pool and adds a realistic delay.
+ */
+function simulateDemoResponse(
+  question: string,
+  signal?: AbortSignal,
+): Promise<{
+  request_id: string
+  answer: string
+  model: string
+  latency_ms: number
+  history_rounds: number
+  usage: { input_tokens: number; output_tokens: number }
+}> {
+  return new Promise((resolve, reject) => {
+    // Pick an answer deterministically based on question length (variety)
+    const idx = question.length % DEMO_ANSWERS.length
+    const baseAnswer = DEMO_ANSWERS[idx]
+
+    // Small delay to simulate model thinking + network (1.2-1.8s)
+    const delay = 1200 + Math.random() * 600
+
+    const timeoutId = setTimeout(() => {
+      resolve({
+        request_id: `demo_${Date.now()}`,
+        answer: baseAnswer,
+        model: 'demo-mode',
+        latency_ms: Math.round(DEMO_MODEL_LATENCY_MS + Math.random() * 400),
+        history_rounds: 0,
+        usage: { input_tokens: 350, output_tokens: 80 },
+      })
+    }, delay)
+
+    // Support cancellation
+    if (signal) {
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timeoutId)
+          const err = new DOMException('The user aborted a request.', 'AbortError')
+          reject(err)
+        },
+        { once: true },
+      )
+    }
+  })
+}
+
+function isDemoMode(): boolean {
+  return DEMO_MODE
 }
 
 // ---- Store ----
@@ -153,15 +220,17 @@ export const useConversationStore = defineStore('conversation', () => {
     const e2eStart = performance.now()
 
     try {
-      const response = await sendVisionChat(
-        {
-          question: trimmedQuestion,
-          image: imageDataUrl,
-          history,
-          client_metrics: metrics,
-        },
-        abortController.signal,
-      )
+      const response = DEMO_MODE
+        ? await simulateDemoResponse(trimmedQuestion, abortController.signal)
+        : await sendVisionChat(
+            {
+              question: trimmedQuestion,
+              image: imageDataUrl,
+              history,
+              client_metrics: metrics,
+            },
+            abortController.signal,
+          )
 
       const e2eLatencyMs = Math.round(performance.now() - e2eStart)
 
@@ -270,6 +339,7 @@ export const useConversationStore = defineStore('conversation', () => {
     // getters
     contextRounds,
     lastAssistantMessage,
+    isDemoMode,
     // actions
     buildHistory,
     sendMessage,

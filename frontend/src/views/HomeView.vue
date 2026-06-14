@@ -222,6 +222,7 @@ function formatMs(ms: number): string {
     <!-- 主区域：摄像头 + 快照面板 -->
     <section class="main-area">
       <div class="camera-panel">
+        <div class="panel-label">摄像头实时画面</div>
         <CameraStage
           ref="cameraStageRef"
           @close="handleCameraClose"
@@ -292,37 +293,39 @@ function formatMs(ms: number): string {
           class="message-item"
           :class="`message-${msg.role} message-${msg.status}`"
         >
-          <div class="message-role">
-            {{ msg.role === 'user' ? '你' : 'SceneTalk' }}
-          </div>
-          <div class="message-content">
-            <template v-if="msg.status === 'sending'">
-              <Loader2 :size="16" class="spin-icon" />
-              <span class="sending-text">正在观察并思考…</span>
-            </template>
-            <template v-else-if="msg.status === 'done'">
-              {{ msg.content }}
-            </template>
-            <template v-else-if="msg.status === 'error'">
-              <div class="error-content">
-                <AlertCircle :size="14" class="error-icon-inline" />
-                <span>{{ msg.errorMessage || '发送失败' }}</span>
-              </div>
-              <button
-                class="btn-retry"
-                :disabled="store.isSending"
-                @click="handleRetry(msg.id)"
-              >
-                <RefreshCw :size="14" />
-                <span>重试</span>
-              </button>
-            </template>
+          <div class="message-bubble">
+            <div class="message-role">
+              {{ msg.role === 'user' ? '你' : 'SceneTalk' }}
+            </div>
+            <div class="message-content">
+              <template v-if="msg.status === 'sending'">
+                <Loader2 :size="14" class="spin-icon" />
+                <span class="sending-text">正在观察并思考…</span>
+              </template>
+              <template v-else-if="msg.status === 'done'">
+                {{ msg.content }}
+              </template>
+              <template v-else-if="msg.status === 'error'">
+                <div class="error-content">
+                  <AlertCircle :size="14" class="error-icon-inline" />
+                  <span>{{ msg.errorMessage || '发送失败' }}</span>
+                </div>
+                <button
+                  class="btn-retry"
+                  :disabled="store.isSending"
+                  @click="handleRetry(msg.id)"
+                >
+                  <RefreshCw :size="14" />
+                  <span>重试</span>
+                </button>
+              </template>
+            </div>
           </div>
           <span
             v-if="msg.latencyMs && msg.status === 'done' && msg.role === 'assistant'"
             class="message-meta"
           >
-            模型 {{ msg.latencyMs }}ms
+            模型响应 {{ msg.latencyMs }}ms
           </span>
         </div>
       </div>
@@ -330,10 +333,13 @@ function formatMs(ms: number): string {
 
     <!-- 性能指标面板 -->
     <section v-if="showMetrics && store.lastMetrics" class="metrics-section">
-      <div class="metrics-header" @click="showMetrics = !showMetrics">
+      <div class="metrics-header">
         <Gauge :size="16" />
         <span>性能指标</span>
-        <span class="metrics-toggle">{{ showMetrics ? '▼' : '▶' }}</span>
+        <span class="context-badge" style="margin-left:0.5rem">请求 #{{ store.messages.filter(m => m.role === 'user').length }}</span>
+        <button class="btn-toggle-metrics" @click="showMetrics = false">
+          <XCircle :size="14" />
+        </button>
       </div>
       <div class="metrics-grid">
         <div class="metric-item">
@@ -349,7 +355,7 @@ function formatMs(ms: number): string {
           <span class="metric-value">{{ formatRatio(store.lastMetrics.compressionRatio) }}</span>
         </div>
         <div class="metric-item">
-          <span class="metric-label">捕获+压缩耗时</span>
+          <span class="metric-label">捕获耗时</span>
           <span class="metric-value">{{ formatMs(store.lastMetrics.captureDurationMs) }}</span>
         </div>
         <div class="metric-item">
@@ -357,7 +363,7 @@ function formatMs(ms: number): string {
           <span class="metric-value">{{ formatMs(store.lastMetrics.modelLatencyMs) }}</span>
         </div>
         <div class="metric-item">
-          <span class="metric-label">端到端耗时</span>
+          <span class="metric-label">端到端总耗时</span>
           <span class="metric-value">{{ formatMs(store.lastMetrics.e2eLatencyMs) }}</span>
         </div>
         <div class="metric-item">
@@ -374,7 +380,7 @@ function formatMs(ms: number): string {
         :disabled="!isCameraReady()"
         @click="handleCapture"
       >
-        <Camera :size="20" />
+        <Camera :size="18" />
         <span>捕获关键帧</span>
       </button>
 
@@ -383,7 +389,7 @@ function formatMs(ms: number): string {
         class="btn btn-cancel"
         @click="handleCancelRequest"
       >
-        <XCircle :size="18" />
+        <XCircle :size="16" />
         <span>取消请求</span>
       </button>
 
@@ -392,7 +398,7 @@ function formatMs(ms: number): string {
         class="btn btn-stop"
         @click="handleStopSpeak"
       >
-        <Square :size="18" />
+        <Square :size="16" />
         <span>停止播报</span>
       </button>
 
@@ -414,9 +420,9 @@ function formatMs(ms: number): string {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 1.5rem;
-  gap: 1rem;
-  max-width: 1200px;
+  padding: 1.25rem 1.5rem 1.5rem;
+  gap: 0.85rem;
+  max-width: 1160px;
   margin: 0 auto;
   width: 100%;
 }
@@ -425,7 +431,7 @@ function formatMs(ms: number): string {
 .main-area {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
   min-height: 0;
 }
 
@@ -433,14 +439,25 @@ function formatMs(ms: number): string {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  gap: 0.4rem;
+}
+
+.panel-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-left: 0.25rem;
 }
 
 /* ---- Snapshot panel ---- */
 .snapshot-panel {
   display: flex;
   flex-direction: column;
-  background: #1e293b;
+  background: #0f1420;
   border-radius: 12px;
+  border: 1px solid #1e293b;
   overflow: hidden;
 }
 
@@ -448,12 +465,13 @@ function formatMs(ms: number): string {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #334155;
-  color: #94a3b8;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #1e293b;
+  color: #64748b;
+  background: #0c1019;
 }
 
-.panel-title { font-size: 0.9rem; font-weight: 600; color: #e2e8f0; }
+.panel-title { font-size: 0.85rem; font-weight: 600; color: #e2e8f0; margin: 0; }
 
 .panel-body {
   flex: 1;
@@ -461,7 +479,7 @@ function formatMs(ms: number): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 1.25rem;
+  padding: 1rem;
   min-height: 200px;
 }
 
@@ -469,146 +487,194 @@ function formatMs(ms: number): string {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   width: 100%;
 }
 
 .snapshot-image {
   width: 100%;
   border-radius: 8px;
-  border: 2px solid #475569;
+  border: 1px solid #334155;
   display: block;
 }
 
 .snapshot-image.snapshot-sending {
   opacity: 0.6;
-  border-color: #818cf8;
+  border-color: #6366f1;
 }
 
 .snapshot-sending-text {
   display: flex; align-items: center; gap: 0.4rem;
-  font-size: 0.85rem; color: #818cf8; font-weight: 500;
+  font-size: 0.82rem; color: #818cf8; font-weight: 500;
 }
 
 .snapshot-placeholder {
-  display: flex; flex-direction: column; align-items: center; gap: 0.75rem; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 0.6rem; text-align: center;
 }
 
-.snapshot-placeholder .placeholder-icon { color: #334155; }
-.snapshot-placeholder .placeholder-text { color: #475569; font-size: 0.85rem; line-height: 1.5; }
+.snapshot-placeholder .placeholder-icon { color: #1e293b; }
+.snapshot-placeholder .placeholder-text { color: #475569; font-size: 0.8rem; line-height: 1.5; }
 
-.capture-error { color: #f87171; font-size: 0.82rem; text-align: center; margin-top: 0.5rem; }
+.capture-error { color: #f87171; font-size: 0.78rem; text-align: center; margin-top: 0.4rem; }
 
 /* ---- Voice ---- */
 .voice-section {
-  background: #1e293b;
+  background: #0f1420;
   border-radius: 12px;
-  border: 1px solid #334155;
+  border: 1px solid #1e293b;
 }
 
 /* ---- Messages ---- */
 .messages-section {
-  background: #1e293b;
+  background: #0f1420;
   border-radius: 12px;
-  border: 1px solid #334155;
+  border: 1px solid #1e293b;
   display: flex;
   flex-direction: column;
-  max-height: 280px;
+  max-height: 300px;
 }
 
 .messages-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 1.25rem;
-  border-bottom: 1px solid #334155;
-  font-size: 0.82rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #94a3b8;
   flex-shrink: 0;
+  background: #0c1019;
 }
 
 .context-badge {
   margin-left: auto;
   margin-right: 0.5rem;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 500;
   color: #60a5fa;
-  background: #1e3a5f;
-  padding: 0.15rem 0.5rem;
+  background: rgba(59, 130, 246, 0.12);
+  padding: 0.15rem 0.55rem;
   border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
 .btn-clear-session {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.75rem;
-  color: #f87171;
+  font-size: 0.72rem;
+  color: #94a3b8;
   background: none;
-  border: 1px solid #dc262644;
+  border: 1px solid #334155;
   border-radius: 6px;
-  padding: 0.2rem 0.5rem;
+  padding: 0.18rem 0.5rem;
   cursor: pointer;
   font-family: inherit;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
 }
 
 .btn-clear-session:hover {
-  background: #dc262622;
-  border-color: #dc2626;
+  color: #f87171;
+  border-color: #dc262644;
+  background: rgba(220, 38, 38, 0.08);
 }
 
 .messages-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0.65rem 1rem;
+  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .message-item {
-  display: flex; flex-direction: column; gap: 0.15rem;
-  padding: 0.5rem 0.85rem; border-radius: 8px; max-width: 85%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 88%;
 }
 
-.message-user { align-self: flex-end; background: #1e3a5f; border: 1px solid #2563eb; }
-.message-assistant { align-self: flex-start; background: #1a2e1a; border: 1px solid #166534; }
-.message-error { border-color: #dc2626 !important; }
+.message-user { align-self: flex-end; }
+.message-assistant { align-self: flex-start; }
+
+.message-bubble {
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+}
+
+.message-user .message-bubble {
+  background: #1e3a5f;
+  border: 1px solid #2563eb44;
+  border-bottom-right-radius: 4px;
+}
+
+.message-assistant .message-bubble {
+  background: #0d1a0d;
+  border: 1px solid #16653444;
+  border-bottom-left-radius: 4px;
+}
+
+.message-error .message-bubble {
+  border-color: #dc262644 !important;
+}
 
 .message-role {
-  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 0.2rem;
 }
 .message-user .message-role { color: #60a5fa; }
 .message-assistant .message-role { color: #4ade80; }
 
 .message-content {
-  font-size: 0.88rem; line-height: 1.5; color: #e2e8f0;
-  display: flex; flex-direction: column; gap: 0.35rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.sending-text { color: #818cf8; }
-.message-meta { font-size: 0.68rem; color: #475569; align-self: flex-end; }
+.message-user .message-content {
+  color: #dbeafe;
+}
+
+.message-assistant .message-content {
+  color: #dcfce7;
+}
+
+.sending-text { color: #818cf8; font-size: 0.85rem; }
+.message-meta {
+  font-size: 0.65rem;
+  color: #475569;
+  align-self: flex-end;
+  margin-top: 0.1rem;
+}
 
 .error-content { display: flex; align-items: flex-start; gap: 0.3rem; color: #fca5a5; font-size: 0.83rem; }
 .error-icon-inline { flex-shrink: 0; margin-top: 0.12rem; color: #f87171; }
 
 .btn-retry {
   display: inline-flex; align-items: center; gap: 0.3rem;
-  padding: 0.25rem 0.65rem; border-radius: 6px;
+  padding: 0.25rem 0.65rem; border-radius: 6px; margin-top: 0.35rem;
   font-size: 0.78rem; font-weight: 600;
-  background: #334155; color: #e2e8f0;
-  border: 1px solid #475569; cursor: pointer; align-self: flex-start; font-family: inherit;
+  background: #1e293b; color: #cbd5e1;
+  border: 1px solid #334155; cursor: pointer; font-family: inherit;
+  transition: background 0.2s, border-color 0.2s;
 }
-.btn-retry:hover:not(:disabled) { background: #475569; }
+.btn-retry:hover:not(:disabled) { background: #334155; border-color: #475569; }
 .btn-retry:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ---- Metrics ---- */
 .metrics-section {
-  background: #1e293b;
+  background: #0f1420;
   border-radius: 12px;
-  border: 1px solid #334155;
+  border: 1px solid #1e293b;
   overflow: hidden;
 }
 
@@ -616,39 +682,54 @@ function formatMs(ms: number): string {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 1.25rem;
-  border-bottom: 1px solid #334155;
-  font-size: 0.82rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #94a3b8;
-  cursor: pointer;
-  user-select: none;
+  background: #0c1019;
 }
 
-.metrics-toggle { margin-left: auto; font-size: 0.7rem; }
+.btn-toggle-metrics {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #475569;
+  cursor: pointer;
+  padding: 0.15rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+.btn-toggle-metrics:hover { color: #94a3b8; }
 
 .metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
 }
 
 .metric-item {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.12rem;
+  background: #0c1019;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #1e293b;
 }
 
 .metric-label {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .metric-value {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
   color: #e2e8f0;
   font-variant-numeric: tabular-nums;
@@ -658,41 +739,49 @@ function formatMs(ms: number): string {
 .control-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.25rem 0;
+  gap: 0.6rem;
+  padding: 0.15rem 0;
   flex-wrap: wrap;
   flex-shrink: 0;
 }
 
 .btn {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.6rem 1.4rem; border-radius: 8px;
-  font-size: 0.9rem; font-weight: 600;
-  transition: background 0.2s, transform 0.1s;
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.55rem 1.2rem; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
   border: none; cursor: pointer; font-family: inherit;
 }
 
 .btn:active:not(:disabled) { transform: scale(0.97); }
-.btn:disabled { cursor: not-allowed; opacity: 0.4; }
+.btn:disabled { cursor: not-allowed; opacity: 0.35; }
 
-.btn-capture { background: #818cf8; color: #0f172a; }
-.btn-capture:hover:not(:disabled) { background: #6366f1; }
+.btn-capture {
+  background: linear-gradient(135deg, #818cf8, #6366f1);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
+}
+.btn-capture:hover:not(:disabled) {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
 
-.btn-cancel { background: #d97706; color: #fff; padding: 0.5rem 0.9rem; }
+.btn-cancel { background: #d97706; color: #fff; padding: 0.45rem 0.85rem; font-size: 0.82rem; }
 .btn-cancel:hover { background: #b45309; }
 
-.btn-stop { background: #dc2626; color: #fff; padding: 0.5rem 0.9rem; }
+.btn-stop { background: #dc2626; color: #fff; padding: 0.45rem 0.85rem; font-size: 0.82rem; }
 .btn-stop:hover { background: #b91c1c; }
 
-.btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; border-radius: 6px; }
+.btn-sm { padding: 0.3rem 0.65rem; font-size: 0.78rem; border-radius: 6px; }
 
 .btn-outline {
-  background: transparent; border: 1px solid #475569; color: #94a3b8;
+  background: transparent; border: 1px solid #334155; color: #94a3b8;
+  transition: border-color 0.2s, color 0.2s;
 }
 .btn-outline:hover { border-color: #f87171; color: #f87171; }
 
-.control-hint { color: #64748b; font-size: 0.85rem; margin-left: auto; }
-.speak-error { color: #f87171; font-size: 0.82rem; }
+.control-hint { color: #475569; font-size: 0.8rem; margin-left: auto; }
+.speak-error { color: #f87171; font-size: 0.78rem; }
 
 /* ---- Utilities ---- */
 .spin-icon { animation: spin 1s linear infinite; }
