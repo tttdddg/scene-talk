@@ -59,6 +59,7 @@ export class VisionChatApiError extends Error {
 
 export async function sendVisionChat(
   payload: VisionChatRequest,
+  signal?: AbortSignal,
 ): Promise<VisionChatResponse> {
   let response: Response
 
@@ -67,8 +68,12 @@ export async function sendVisionChat(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal,
     })
   } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw err
+    }
     throw new VisionChatApiError(
       'NETWORK_ERROR',
       '网络连接失败，请检查后端服务是否已启动。',

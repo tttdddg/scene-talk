@@ -1,15 +1,58 @@
+/**
+ * Camera keyframe capture with client-side compression.
+ *
+ * Captures a frame from a <video> element, resizes, and compresses to JPEG.
+ * All metrics come from the actual pipeline run — never fabricated.
+ */
+
 import { ref } from 'vue'
+import { compressImage } from '../utils/imageCompression'
+
+// ---- Types ----
+
+export interface CaptureMetrics {
+  /** Bytes of the resized JPEG at INITIAL_QUALITY (pre-quality-loop). */
+  originalBytes: number
+  /** Final compressed bytes sent to backend. */
+  compressedBytes: number
+  /** compressedBytes / originalBytes. */
+  compressionRatio: number
+  /** Original video dimensions. */
+  originalWidth: number
+  /** Original video dimensions. */
+  originalHeight: number
+  /** Dimensions after resize. */
+  compressedWidth: number
+  /** Dimensions after resize. */
+  compressedHeight: number
+  /** Time spent drawing + resizing + compressing (ms). */
+  compressionDurationMs: number
+  /** Time from capture start to capture end (ms). */
+  captureDurationMs: number
+  /** Final JPEG quality used. */
+  finalQuality: number
+}
+
+// ---- Composable ----
 
 export function useImageCapture() {
   const snapshot = ref<string | null>(null)
   const captureError = ref('')
+  const lastMetrics = ref<CaptureMetrics | null>(null)
 
   /**
-   * 从 video 元素捕获当前帧，返回 JPEG data URL。
-   * 摄像头未就绪时拒绝捕获。
+   * Capture a frame from a video element, compress it, and produce a JPEG data URL.
+   *
+   * Returns true on success (snapshot ref is populated), false on failure.
+   * Camera must be active: readyState ≥ HAVE_CURRENT_DATA and dimensions > 0.
    */
-  function captureFrame(videoEl: HTMLVideoElement | null): boolean {
+  async function captureFrame(
+    videoEl: HTMLVideoElement | null,
+  ): Promise<boolean> {
     captureError.value = ''
+    lastMetrics.value = null
+
+    const t0 = performance.now()
 
     if (!videoEl) {
       captureError.value = '视频元素未就绪，请先开启摄像头。'
@@ -27,21 +70,29 @@ export function useImageCapture() {
     }
 
     try {
-      const canvas = document.createElement('canvas')
-      canvas.width = videoEl.videoWidth
-      canvas.height = videoEl.videoHeight
+      const result = await compressImage(videoEl)
+      const t1 = performance.now()
 
-      const ctx = canvas.getContext('2d')
-      if (!ctx) {
-        captureError.value = '浏览器不支持 Canvas 2D 上下文，无法截图。'
+      if ('code' in result) {
+        // CompressionError
+        captureError.value = result.message
         return false
       }
 
-      // 如果摄像头是前置，画面是镜像的；截图时水平翻转以还原真实画面
-      ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height)
-
-      // JPEG 压缩输出，限制质量 85%
-      snapshot.value = canvas.toDataURL('image/jpeg', 0.85)
+      // Success
+      snapshot.value = result.dataUrl
+      lastMetrics.value = {
+        originalBytes: result.originalBytes,
+        compressedBytes: result.compressedBytes,
+        compressionRatio: result.compressionRatio,
+        originalWidth: result.originalWidth,
+        originalHeight: result.originalHeight,
+        compressedWidth: result.compressedWidth,
+        compressedHeight: result.compressedHeight,
+        compressionDurationMs: result.compressionDurationMs,
+        captureDurationMs: Math.round(t1 - t0),
+        finalQuality: result.finalQuality,
+      }
       return true
     } catch (e: unknown) {
       const err = e as Error
@@ -53,11 +104,13 @@ export function useImageCapture() {
   function clearSnapshot(): void {
     snapshot.value = null
     captureError.value = ''
+    lastMetrics.value = null
   }
 
   return {
     snapshot,
     captureError,
+    lastMetrics,
     captureFrame,
     clearSnapshot,
   }
